@@ -1,72 +1,95 @@
 #!/bin/bash
-#IPcheck script
-#17-jan-2017
-#created by Jaison
+#script to check ip is whitelisted or not in the server
+#Author:Jayaganesh
+#Date: 01-01-2018
+
+echo -e "Script to chck ip is whitelisted or not in the server"
+echo
+ip_address=$2
+server_name=$3
+reason=$4
+total=$#
+ip_format()
+{
+	if [[ $ip_address =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]; then
+
+#checking if ipv4 is greater than 255
+		for i in {1..4}
+		do
+			if [ $(echo "$ip_address" |cut -d. -f $i) -gt 255 ]
+			then
+				echo " ip is not within range 0 to 255"
+				exit 1
+			fi
+		done
+	#	echo "ip is in range 0-255 and correct format"
+	else
+		echo "bad ip format"	
+		 echo "To check an ip_address: sh $0 -c IP.IP.IP.IP"
+		exit 1
+		return 
+		
+	fi
+#	exit 0
+}
+
+helper()
+{
+	 echo "To add an ip_address: sh $0 -a IP.IP.IP.IP server_name reason"
+	 echo "To check an ip_address: sh $0 -c IP.IP.IP.IP"
+	 echo "for help: sh $0 -h"
+	  exit 1
+}
+check()
+{
+	if [ $total -ge 2 ]
+	then
+	#	echo "checking ip_address format"
+		ip_format
+		if [ ! "` grep $ip_address /home/ec2-user/test/ipcheck/iplist.txt`" ]
+		then
+			echo "ip address not found in db /home/ec2-user/test/ipcheck/iplist.txt"
+			
+		else
+			echo -e "ip_address already found in the db"
+			 grep $ip_address /home/ec2-user/test/ipcheck/iplist.txt
+			 exit 1
+		fi
+	else
+		 echo "To check an ip_address: sh $0 -c IP.IP.IP.IP"
+	fi
+}
+add()
+{
+if [ $total -eq 4 ] 
+        then
+                
+         	#echo "checking ip_address format"
+                # ip_format
+		check
+        	echo -e "$ip_address : $server_name: $reason">>/home/ec2-user/test/ipcheck/iplist.txt
+                echo "ip address added"
+
+	else
+		
+        	echo "To add an ip_address: sh $0 -a IP.IP.IP.IP server_name reason"
+fi
+
+}
+
+if [ $# -le 1 ]
+ then
+	helper
+else 
 case $1 in
--a|-A)
-ipcalc -cs $2
-if [ "$?" -eq "0" ];then
-{
-if [[ $# < 3 ]] ; then echo -e "\nReason not provided. Use -h to check the syntax"
-else
-{
-grep $2 /home/bob/IPlist.txt >/dev/null
-if [ "$?" -eq "0" ];then
-{
-echo -e "\nIP already in the list. Use -c to check"
-}
-else
-{
-echo -e "$2 : $3">>/home/bob/IPlist.txt
-echo -e "\nIP added in DB"
-}
-fi
-}
-fi
-}
-else
-{
-echo "The entered IP address is not a valid IPV4 address. Please check the IP address"
-}
-fi;;
--c|C)
-ipcalc -cs $2
-if [ "$?" -eq "0" ];then
-{
-grep -i $2 /home/bob/IPlist.txt >/dev/null
-if [ "$?" -eq "0" ];then
-{
-grep -i $2 /home/bob/IPlist.txt
-}
-else
-{
-grep -i `echo $2| cut -d'.' -f 1,2,3` /home/bob/IPlist.txt >/dev/null
-if [ "$?" -eq "0" ];then
-{
-echo -e "\nExact IP address is not there in the DB. Check this range and confirm whether IP address is on the range or not\n"
-grep -i `echo $2| cut -d'.' -f 1,2,3` /home/bob/IPlist.txt
-}
-else
-{
-echo -e "\nIP address not in our DB of Do Not Block list" 
-echo -e "\n*** Please note that the IP address belongs to the organization `whois $2| grep -i OrgName|uniq| awk {'print $2'}` and it belongs to the country `whois $2| grep -i Country|uniq |awk {'print $2'}`Make sure that you check the IP address in iplocation before blocking it."
-}
-fi
-}
-fi
-}
-else
-{
-echo -e "\nThe entered IP address is not a valid IPV4 address. Please check the IP address"
-}
-fi
-;;
--h)
-echo -e "\nUse -c IP.IP.IP.IP to check for an IP address"
-echo -e "\nUse -a IP.IP.IP.IP 'Reason for not blocking'(Should use single quotes) for adding an IP address";;
--l)
-cat /home/bob/IPlist.txt;;
-*)
-echo -e "\nwrong argument. Use -h to get the syntax"
-;;
+	-c)
+		check
+	;;
+	-a)
+		add
+	;;
+	-h)
+		helper
+	;;
 esac
+fi
